@@ -5,19 +5,10 @@ PUBG TCP Reset Utility с трей-иконкой
 pip install psutil pystray pillow
 """
 
-import ctypes
-import struct
-import socket
-import psutil
+import ctypes, struct, socket, psutil, threading, logging, json, os, re, pystray, time
 import tkinter as tk
 from tkinter import ttk, messagebox
-import threading
-import logging
-import json
-import os
-import re
 from PIL import Image, ImageDraw
-import pystray
 
 # -------------------- Конфигурация --------------------
 PROC_NAME = "TslGame.exe"
@@ -28,8 +19,8 @@ DEFAULT_CONFIG = {
     "button_color": "#ff4444",
     "text_color": "white",
     "button_text": "Reset",
-    "width": 100,
-    "height": 50,
+    "width": 50,
+    "height": 25,
     "x": 50,
     "y": 50,
     "movable": True
@@ -282,6 +273,8 @@ class App:
         self.config = load_config()
         self.create_widgets()
         self.create_tray_icon()
+        self.delay = 30  # задержка между нажатием кномки сброса соединений в секундах
+        self.last_time = time.monotonic() - 30
 
     def create_tray_icon(self):
         # Иконка для трей
@@ -367,7 +360,14 @@ class App:
         self.create_floating()
 
     def reset_pubg(self):
-        threading.Thread(target=self._reset_thread, daemon=True).start()
+        now = time.monotonic()
+        if now - self.last_time >= self.delay:
+            threading.Thread(target=self._reset_thread, daemon=True).start()
+            self.last_time = now
+        else:
+            p = str(abs(int(now - self.last_time - self.delay)))
+            
+            self.logger.warning("Вы сможете нажать кнопку через " + p + " секунд.")
 
     def _reset_thread(self):
         if not is_admin():
